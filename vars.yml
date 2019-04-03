@@ -1,0 +1,4 @@
+pipeline-repo: git@github.com:pivotal/platform-automation-deployments
+platform-automation-bucket: ref-pipeline-product
+credhub-server: https://platform-automation.ci.cf-app.com:8844/
+credhub-prefix: /concourse/main/

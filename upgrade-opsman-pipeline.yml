@@ -11,19 +11,67 @@ resources:
   source:
     product_slug: platform-automation
     api_token: ((pivnet-refresh-token))
+- name: env
+  type: git
+  source:
+    uri: ((pipeline-repo))
+    private_key: ((plat-auto-pipes-deploy-key.private_key))
+- name: installation
+  type: s3
+  source:
+    access_key_id: ((s3_access_key_id))
+    secret_access_key: ((s3_secret_access_key))
+    region_name: us-west-2
+    bucket: ((platform-automation-bucket))
+    regexp: foundation/installation-(.*).zip
+
 jobs:
-- name: test
+- name: export-installation
+  serial: true
   plan:
     - get: platform-automation-image
+      tags:
+      - vsphere
       resource: platform-automation
       params:
         globs: ["*image*.tgz"]
         unpack: true
     - get: platform-automation-tasks
+      tags:
+      - vsphere
       resource: platform-automation
       params:
         globs: ["*tasks*.zip"]
         unpack: true
-    - task: test
+    - get: env
+      tags:
+      - vsphere
+    - task: credhub-interpolate
+      tags:
+      - vsphere
       image: platform-automation-image
-      file: platform-automation-tasks/tasks/test.yml
+      file: platform-automation-tasks/tasks/credhub-interpolate.yml
+      params:
+        CREDHUB_CLIENT: ((credhub-client))
+        CREDHUB_SECRET: ((credhub-secret))
+        CREDHUB_SERVER: ((credhub-server))
+        PREFIX: ((credhub-prefix))
+        INTERPOLATION_PATH: platform-automation/vsphere/env/env.yml
+      input_mapping:
+        files: env
+      output_mapping:
+        interpolated-files: interpolated-env
+    - task: export-installation
+      tags:
+      - vsphere
+      image: platform-automation-image
+      file: platform-automation-tasks/tasks/export-installation.yml
+      params:
+        ENV_FILE: platform-automation/vsphere/env/env.yml
+      input_mapping:
+        env: interpolated-env
+    - put: installation
+      tags:
+      - vsphere
+      params:
+        file: installation/installation-*.zip
