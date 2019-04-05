@@ -75,3 +75,50 @@ jobs:
       - vsphere
       params:
         file: installation/installation-*.zip
+
+- name: upgrade-ops-manager
+  serial: true
+  plan:
+  - get: platform-automation-image
+    resource: platform-automation
+      params:
+      globs: ["*image*.tgz"]
+      unpack: true
+  - get: platform-automation-tasks
+    resource: platform-automation
+    params:
+      globs: ["*tasks*.zip"]
+      unpack: true
+  - get: env
+  - get: installation
+  - task: credhub-interpolate
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/credhub-interpolate.yml
+    params:
+      CREDHUB_CLIENT: ((credhub-client))
+      CREDHUB_SECRET: ((credhub-secret))
+      CREDHUB_SERVER: ((credhub-server))
+      PREFIX: ((credhub-prefix))
+      INTERPOLATION_PATH: |
+        platform-automation/vsphere/env/env.yml
+        foundation/download-opsman.yml
+        foundation/opsman.yml # Remove if you don't have secrets in this file.
+    input_mapping:
+      files: env
+  - task: download-opsman-image
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/download-product.yml
+    params:
+      CONFIG_FILE: download-opsman.yml
+  - task: upgrade-ops-manager
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upgrade-ops-manager.yml
+    input_mapping:
+      config: env
+      image: downloaded-product
+      secrets: interpolated-files
+      state: env
+    params:
+      ENV_FILE: platform-automation/vsphere/env/env.yml
+      OPSMAN_CONFIG_FILE: foundation/opsman.yml
+      STATE_FILE: foundation/state.yml
