@@ -81,7 +81,7 @@ jobs:
   plan:
   - get: platform-automation-image
     resource: platform-automation
-      params:
+    params:
       globs: ["*image*.tgz"]
       unpack: true
   - get: platform-automation-tasks
@@ -102,7 +102,8 @@ jobs:
       INTERPOLATION_PATH: |
         platform-automation/vsphere/env/env.yml
         foundation/download-opsman.yml
-        foundation/opsman.yml # Remove if you don't have secrets in this file.
+        foundation/opsman.yml
+      # Remove foundation/opsman.yml if you don't have secrets in this file.
     input_mapping:
       files: env
   - task: download-opsman-image
